@@ -22,6 +22,7 @@ function SafeStrideMainContainer() {
   const [feedback, setFeedback] = useState("");
   const [feedbacks, setFeedbacks] = useState([]);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [locationError, setLocationError] = useState(""); // For geolocation errors
 
   // Theme colors
   const COLORS = {
@@ -32,9 +33,14 @@ function SafeStrideMainContainer() {
     text: "#212121",
   };
 
-  // Fetch current location
+  // PUBLIC_INTERFACE
+  /**
+   * useEffect to get the user's actual geolocation on component mount.
+   * If denied or geolocation fails, display an error message in UI.
+   * Removes fallback to static/demo location.
+   */
   useEffect(() => {
-    if (!currentLocation) {
+    if (currentLocation == null) {
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -42,14 +48,34 @@ function SafeStrideMainContainer() {
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
             });
+            setLocationError("");
           },
-          () => {
-            // If denied, fallback to static location
-            setCurrentLocation({ lat: 37.7749, lng: -122.4194 }); // SF
+          (err) => {
+            if (err.code === 1) {
+              setLocationError(
+                "Location permission denied. Please allow location access in your browser to use SafeStride features."
+              );
+            } else if (err.code === 2) {
+              setLocationError(
+                "Location unavailable. Please check your device location settings."
+              );
+            } else if (err.code === 3) {
+              setLocationError(
+                "Location request timed out. Please try again."
+              );
+            } else {
+              setLocationError(
+                "Unable to access your location. Please try again or check browser permissions."
+              );
+            }
+            setCurrentLocation(null);
           }
         );
       } else {
-        setCurrentLocation({ lat: 37.7749, lng: -122.4194 }); // SF
+        setLocationError(
+          "Geolocation not supported in this browser. SafeStride requires geolocation access."
+        );
+        setCurrentLocation(null);
       }
     }
   }, [currentLocation]);
@@ -251,6 +277,23 @@ function SafeStrideMainContainer() {
       <div style={{ fontSize: 21, fontWeight: 600, marginBottom: 2 }}>
         SafeStride Controls
       </div>
+      {locationError && (
+        <div
+          style={{
+            background: "#fff4f4",
+            color: COLORS.accent,
+            padding: "8px 14px",
+            borderRadius: 6,
+            border: `1px solid ${COLORS.accent}40`,
+            marginBottom: "10px",
+            fontWeight: 500,
+            fontSize: 15,
+          }}
+          role="alert"
+        >
+          {locationError}
+        </div>
+      )}
       <form onSubmit={handleCalculateRoute}>
         <label style={{ display: "block", fontWeight: 500, marginBottom: 4 }}>
           Enter Destination Address:
@@ -281,7 +324,6 @@ function SafeStrideMainContainer() {
             color: "#fff",
             border: "none",
             borderRadius: 5,
-            padding: "10px 0",
             fontWeight: 600,
             fontSize: 16,
             width: "100%",
