@@ -1,0 +1,4 @@
+{
+    "command": "npm run test",
+    "working_directory": "/home/kavia/workspace/code-generation/safestride-64081-c99112a6/safe_stride_frontend"
+}
